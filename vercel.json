@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/oeuvre/:id", "destination": "/index.html" },
+    { "source": "/oeuvre/:id/", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}
