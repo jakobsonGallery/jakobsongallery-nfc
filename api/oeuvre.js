@@ -3,8 +3,30 @@ const OEUVRES_TABLE = 'tblwzvPNp07L2pu4Y';
 const ACHATS_TABLE = 'tbln43SRK0PdGH9Gi';
 const CLIENTS_TABLE = 'tblKxwOtgwwt04IA2';
 
-async function fetchAirtable(url, apiKey) {
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+// IDs des champs de la table OEUVRES
+const F = {
+  oeuvre:     'fldEB4ApP5ajbkg4L',
+  artiste:    'fldHhZUoLG8Ht5fkZ',
+  photo:      'fldmZixVmqpdLfbym',
+  dimensions: 'fldZQrcXm9Ds4b36U',
+  technique:  'fldKbkhGxJ975ZA88',
+  annee:      'fldAdpAj4vf6K785v',
+  notes:      'fldnwiBffTWnBKDoo',
+  achat:      'fldNHe5ResC5gdZbC',
+};
+
+// IDs des champs de la table ACHATS
+const A = {
+  oeuvre:      'fldwBtMqArBGXfpZw',
+  client:      'fldKj24KajkrU3zFj',
+  prix:        'fldWP6SqCbemWBIBd',
+  dateAchat:   'fldiChcxNg2hfAaW3',
+};
+
+async function fetchAT(path, apiKey) {
+  const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${apiKey}` }
+  });
   if (!res.ok) return null;
   return res.json();
 }
@@ -22,90 +44,72 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'Clé API manquante' });
 
   try {
-    let oeuvreData = null;
-    let achatData = null;
+    let of = null; // oeuvre fields
+    let af = null; // achat fields
 
-    // Essai 1 : l'ID est directement une œuvre
-    const tryOeuvre = await fetchAirtable(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE}/${OEUVRES_TABLE}/${id}`,
-      apiKey
-    );
-
-    if (tryOeuvre) {
-      oeuvreData = tryOeuvre;
-      // Chercher l'achat lié à cette œuvre
-      const achatIds = tryOeuvre.fields?.['Achat'];
+    // Essai 1 : l'ID est une œuvre
+    const tryOeuvre = await fetchAT(`/${OEUVRES_TABLE}/${id}`, apiKey);
+    if (tryOeuvre?.fields?.[F.oeuvre]) {
+      of = tryOeuvre.fields;
+      // Chercher l'achat lié
+      const achatIds = of[F.achat];
       if (Array.isArray(achatIds) && achatIds.length > 0) {
-        achatData = await fetchAirtable(
-          `https://api.airtable.com/v0/${AIRTABLE_BASE}/${ACHATS_TABLE}/${achatIds[0]}`,
-          apiKey
-        );
+        const achatRec = await fetchAT(`/${ACHATS_TABLE}/${achatIds[0]}`, apiKey);
+        af = achatRec?.fields || null;
       }
     } else {
-      // Essai 2 : l'ID est un achat → on cherche l'œuvre liée
-      const tryAchat = await fetchAirtable(
-        `https://api.airtable.com/v0/${AIRTABLE_BASE}/${ACHATS_TABLE}/${id}`,
-        apiKey
-      );
+      // Essai 2 : l'ID est un achat
+      const tryAchat = await fetchAT(`/${ACHATS_TABLE}/${id}`, apiKey);
       if (!tryAchat) return res.status(404).json({ error: 'Introuvable' });
-
-      achatData = tryAchat;
-      const oeuvreIds = tryAchat.fields?.['\u0152uvre'];
+      af = tryAchat.fields;
+      const oeuvreIds = af?.[A.oeuvre];
       if (Array.isArray(oeuvreIds) && oeuvreIds.length > 0) {
-        oeuvreData = await fetchAirtable(
-          `https://api.airtable.com/v0/${AIRTABLE_BASE}/${OEUVRES_TABLE}/${oeuvreIds[0]}`,
-          apiKey
-        );
+        const oeuvreRec = await fetchAT(`/${OEUVRES_TABLE}/${oeuvreIds[0]}`, apiKey);
+        of = oeuvreRec?.fields || null;
       }
     }
 
-    if (!oeuvreData) return res.status(404).json({ error: 'Oeuvre introuvable' });
-
-    const f = oeuvreData.fields || {};
-    const a = achatData?.fields || {};
+    if (!of) return res.status(404).json({ error: 'Oeuvre introuvable' });
 
     // Photo
-    const photoUrl = (() => {
-      const photos = f['Photo'];
-      if (Array.isArray(photos) && photos.length > 0) {
-        return photos[0].thumbnails?.large?.url || photos[0].url || null;
-      }
-      return null;
-    })();
+    const photos = of[F.photo];
+    const photoUrl = Array.isArray(photos) && photos.length > 0
+      ? photos[0].thumbnails?.large?.url || photos[0].url || null
+      : null;
+
+    // Technique (c'est un objet singleSelect)
+    const techniqueRaw = of[F.technique];
+    const technique = typeof techniqueRaw === 'object' ? techniqueRaw?.name || '' : techniqueRaw || '';
 
     // Prix
-    const prixAchat = a['Prix de vente']
-      ? `${Number(a['Prix de vente']).toLocaleString('fr-FR')} €`
-      : '';
+    const prixRaw = af?.[A.prix];
+    const prixAchat = prixRaw ? `${Number(prixRaw).toLocaleString('fr-FR')} €` : '';
 
     // Date
     let dateAchat = '';
-    if (a["Date D'achat"]) {
-      dateAchat = new Date(a["Date D'achat"]).toLocaleDateString('fr-FR', {
+    const dateRaw = af?.[A.dateAchat];
+    if (dateRaw) {
+      dateAchat = new Date(dateRaw).toLocaleDateString('fr-FR', {
         day: 'numeric', month: 'long', year: 'numeric'
       });
     }
 
     // Client
     let client = '';
-    const clientIds = a['Client'];
+    const clientIds = af?.[A.client];
     if (Array.isArray(clientIds) && clientIds.length > 0) {
-      const clientData = await fetchAirtable(
-        `https://api.airtable.com/v0/${AIRTABLE_BASE}/${CLIENTS_TABLE}/${clientIds[0]}`,
-        apiKey
-      );
-      client = clientData?.fields?.['Client'] || '';
+      const clientRec = await fetchAT(`/${CLIENTS_TABLE}/${clientIds[0]}`, apiKey);
+      client = clientRec?.fields?.['Client'] || '';
     }
 
     return res.status(200).json({
-      id: oeuvreData.id,
-      oeuvre: f['\u0152uvre'] || f['Oeuvre'] || '',
-      artiste: f['Artiste'] || '',
-      technique: typeof f['Technique'] === 'object' ? f['Technique']?.name || '' : f['Technique'] || '',
-      dimensions: f['Dimensions (cm)'] || '',
-      annee: f['Ann\u00e9e de l\'\u0153uvre'] || '',
-      notes: f['Notes'] || '',
-      photo_url: photoUrl,
+      oeuvre:     of[F.oeuvre] || '',
+      artiste:    of[F.artiste] || '',
+      technique:  technique,
+      dimensions: of[F.dimensions] || '',
+      annee:      of[F.annee] || '',
+      notes:      of[F.notes] || '',
+      photo_url:  photoUrl,
       client,
       date_achat: dateAchat,
       prix_achat: prixAchat,
