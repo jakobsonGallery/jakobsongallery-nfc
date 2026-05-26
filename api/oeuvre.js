@@ -23,10 +23,33 @@ export default async function handler(req, res) {
       `https://api.airtable.com/v0/${AIRTABLE_BASE}/${OEUVRES_TABLE}/${id}`,
       { headers }
     );
-    if (!oeuvreRes.ok) return res.status(404).json({ error: 'Oeuvre introuvable' });
-    const oeuvreData = await oeuvreRes.json();
+
+    // Si l'ID n'est pas dans OEUVRES, on cherche dans ACHATS pour trouver l'œuvre liée
+    let oeuvreId = id;
+    if (!oeuvreRes.ok) {
+      // Peut-être que c'est un ID d'achat — on cherche l'œuvre via ACHATS
+      const achatRes = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE}/${ACHATS_TABLE}/${id}`,
+        { headers }
+      );
+      if (!achatRes.ok) return res.status(404).json({ error: 'Introuvable' });
+      const achatData = await achatRes.json();
+      const oeuvreIds = achatData.fields?.['Œuvre'];
+      if (!Array.isArray(oeuvreIds) || !oeuvreIds.length) return res.status(404).json({ error: 'Oeuvre non liée' });
+      oeuvreId = oeuvreIds[0];
+    }
+
+    // 2. Charger l'œuvre avec le bon ID
+    const finalOeuvreRes = oeuvreId === id ? oeuvreRes : await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE}/${OEUVRES_TABLE}/${oeuvreId}`,
+      { headers }
+    );
+    if (!finalOeuvreRes.ok) return res.status(404).json({ error: 'Oeuvre introuvable' });
+
+    const oeuvreData = await finalOeuvreRes.json();
     const f = oeuvreData.fields || {};
 
+    // Photo
     const photoUrl = (() => {
       const photos = f['Photo'];
       if (Array.isArray(photos) && photos.length > 0) {
@@ -35,7 +58,10 @@ export default async function handler(req, res) {
       return null;
     })();
 
-    // 2. Récupérer l'achat lié (premier achat)
+    // Dimensions depuis la fiche oeuvre
+    const dimensions = f['Dimensions (cm)'] || '';
+
+    // 3. Récupérer l'achat lié pour client, date, prix
     let client = '';
     let dateAchat = '';
     let prixAchat = '';
@@ -50,17 +76,17 @@ export default async function handler(req, res) {
         const achatData = await achatRes.json();
         const a = achatData.fields || {};
 
-        // Prix de vente
-        prixAchat = a['Prix de vente'] ? `${Number(a['Prix de vente']).toLocaleString('fr-FR')} €` : '';
+        prixAchat = a['Prix de vente']
+          ? `${Number(a['Prix de vente']).toLocaleString('fr-FR')} €`
+          : '';
 
-        // Date d'achat
         if (a["Date D'achat"]) {
           dateAchat = new Date(a["Date D'achat"]).toLocaleDateString('fr-FR', {
             day: 'numeric', month: 'long', year: 'numeric'
           });
         }
 
-        // 3. Récupérer le client lié
+        // Client
         const clientIds = a['Client'];
         if (Array.isArray(clientIds) && clientIds.length > 0) {
           const clientRes = await fetch(
@@ -79,8 +105,8 @@ export default async function handler(req, res) {
       id: oeuvreData.id,
       oeuvre: f['\u0152uvre'] || f['Oeuvre'] || '',
       artiste: f['Artiste'] || '',
-      technique: f['Technique'] || '',
-      dimensions: f['Dimensions (cm)'] || '',
+      technique: typeof f['Technique'] === 'object' ? f['Technique']?.name || '' : f['Technique'] || '',
+      dimensions,
       annee: f['Ann\u00e9e de l\'\u0153uvre'] || '',
       notes: f['Notes'] || '',
       photo_url: photoUrl,
