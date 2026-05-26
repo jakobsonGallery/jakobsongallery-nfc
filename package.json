@@ -1,6 +1,7 @@
 {
   "name": "jakobson-nfc",
   "version": "1.0.0",
-  "description": "Certificats NFC - Jakobson Paris",
-  "private": true
+  "description": "Certificats NFC - Jakobson Gallery",
+  "private": true,
+  "type": "module"
 }
