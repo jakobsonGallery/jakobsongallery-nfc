@@ -15,6 +15,7 @@
       flex-direction: column;
       align-items: center;
     }
+    .logo-top { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #888780; margin-bottom: 1.25rem; text-align: center; }
     .card { background: #fff; border-radius: 16px; overflow: hidden; max-width: 480px; width: 100%; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
     .header { background: #2C2C2A; padding: 1.5rem 1.5rem 1rem; }
     .badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: #D3D1C7; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.75rem; }
@@ -23,12 +24,15 @@
     .artwork-img { width: 100%; height: 240px; object-fit: cover; display: block; }
     .artwork-placeholder { width: 100%; height: 240px; background: #D3D1C7; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: #888780; font-size: 13px; }
     .body { padding: 1.25rem 1.5rem; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+    .section-label { font-size: 10px; color: #888780; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; margin-top: 1rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.5rem; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 0.5rem; }
     .field { background: #F1EFE8; border-radius: 8px; padding: 9px 11px; }
     .field-label { font-size: 10px; color: #888780; text-transform: uppercase; letter-spacing: 0.06em; }
     .field-value { font-size: 14px; font-weight: 500; color: #2C2C2A; margin-top: 2px; }
-    .description { font-size: 13px; color: #5F5E5A; line-height: 1.65; margin-bottom: 1.25rem; }
-    hr { border: none; border-top: 0.5px solid #E5E3DC; margin-bottom: 1rem; }
+    .field-value.highlight { color: #0F6E56; }
+    .description { font-size: 13px; color: #5F5E5A; line-height: 1.65; margin: 1rem 0; }
+    hr { border: none; border-top: 0.5px solid #E5E3DC; margin: 1rem 0; }
     .cert-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .cert-id-label { font-size: 10px; color: #888780; text-transform: uppercase; letter-spacing: .06em; }
     .cert-id-value { font-size: 13px; font-weight: 500; font-family: 'Courier New', monospace; color: #5F5E5A; margin-top: 2px; }
@@ -40,13 +44,16 @@
     .loading { text-align: center; padding: 3rem 1.5rem; color: #888780; }
     .spinner { width: 32px; height: 32px; border: 2px solid #D3D1C7; border-top-color: #2C2C2A; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .logo-top { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #888780; margin-bottom: 1.25rem; text-align: center; }
+    .client-block { background: #F1EFE8; border-radius: 8px; padding: 12px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; }
+    .client-avatar { width: 36px; height: 36px; border-radius: 50%; background: #2C2C2A; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: #F1EFE8; flex-shrink: 0; }
+    .client-name { font-size: 14px; font-weight: 500; color: #2C2C2A; }
+    .client-sub { font-size: 12px; color: #888780; margin-top: 1px; }
   </style>
 </head>
 <body>
   <div class="logo-top">Jakobson Paris — Art Contemporain</div>
   <div class="card" id="card">
-    <div class="loading" id="loading">
+    <div class="loading">
       <div class="spinner"></div>
       <p>Chargement du certificat…</p>
     </div>
@@ -58,7 +65,7 @@
     async function loadOeuvre(id) {
       try {
         const res = await fetch('/api/oeuvre?id=' + encodeURIComponent(id));
-        if (!res.ok) throw new Error('Introuvable');
+        if (!res.ok) throw new Error();
         const d = await res.json();
         renderCert(d, id);
       } catch(e) {
@@ -66,17 +73,38 @@
       }
     }
 
+    function initials(name) {
+      if (!name) return '?';
+      return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+    }
+
     function renderCert(d, id) {
       const certNum = 'JAK-' + id.slice(-6).toUpperCase();
       const today = new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
+
+      const clientBlock = d.client ? `
+        <div class="section-label">Acquéreur</div>
+        <div class="client-block">
+          <div class="client-avatar">${initials(d.client)}</div>
+          <div>
+            <div class="client-name">${d.client}</div>
+            <div class="client-sub">${d.date_achat ? 'Acquis le ' + d.date_achat : ''}</div>
+          </div>
+          ${d.prix_achat ? `<div style="margin-left:auto;text-align:right"><div class="cert-id-label">Prix</div><div style="font-size:15px;font-weight:500;color:#0F6E56">${d.prix_achat}</div></div>` : ''}
+        </div>` : '';
+
       document.getElementById('card').innerHTML = `
         <div class="header">
           <div class="badge">★ Certificat d'authenticité</div>
           <div class="title">${d.oeuvre||'Œuvre'}</div>
           <div class="artist">par ${d.artiste||'—'}</div>
         </div>
-        ${d.photo_url ? `<img class="artwork-img" src="${d.photo_url}" alt="${d.oeuvre}" onerror="this.style.display='none'">` : '<div class="artwork-placeholder">📷 Photo à venir</div>'}
+        ${d.photo_url
+          ? `<img class="artwork-img" src="${d.photo_url}" alt="${d.oeuvre}" onerror="this.style.display='none'">`
+          : '<div class="artwork-placeholder">📷 Photo à venir</div>'
+        }
         <div class="body">
+          <div class="section-label">Détails de l'œuvre</div>
           <div class="grid">
             <div class="field"><div class="field-label">Artiste</div><div class="field-value">${d.artiste||'—'}</div></div>
             <div class="field"><div class="field-label">Année</div><div class="field-value">${d.annee||'—'}</div></div>
@@ -84,6 +112,7 @@
             <div class="field"><div class="field-label">Dimensions</div><div class="field-value">${d.dimensions||'—'}</div></div>
           </div>
           ${d.notes ? `<p class="description">${d.notes}</p>` : ''}
+          ${clientBlock}
           <hr>
           <div class="cert-row">
             <div><div class="cert-id-label">N° de certificat</div><div class="cert-id-value">${certNum}</div></div>
@@ -103,7 +132,7 @@
     if (recordId && recordId.startsWith('rec')) {
       loadOeuvre(recordId);
     } else {
-      document.getElementById('loading').innerHTML = '<p style="font-weight:500;color:#2C2C2A">Jakobson Paris</p><p style="font-size:13px;color:#5F5E5A;margin-top:6px">Scannez un tag NFC pour afficher le certificat.</p>';
+      document.getElementById('card').innerHTML = '<div class="loading"><p style="font-weight:500;color:#2C2C2A">Jakobson Paris</p><p style="font-size:13px;color:#5F5E5A;margin-top:6px">Scannez un tag NFC pour afficher le certificat.</p></div>';
     }
   </script>
 </body>
