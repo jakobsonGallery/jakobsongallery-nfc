@@ -111,24 +111,20 @@ module.exports = async function handler(req, res) {
 
     const photos = oeuvreFields[F.photo];
 
-  const photos = oeuvreFields[F.photo];
+const photos = oeuvreFields[F.photo];
 
 const photoUrl =
   Array.isArray(photos) && photos.length > 0
     ? (
         photos[0].thumbnails &&
-        photos[0].thumbnails.full &&
-        photos[0].thumbnails.full.url
-          ? photos[0].thumbnails.full.url
-          : (
-              photos[0].thumbnails &&
-              photos[0].thumbnails.large &&
-              photos[0].thumbnails.large.url
-                ? photos[0].thumbnails.large.url
-                : photos[0].url
-            )
+        photos[0].thumbnails.large &&
+        photos[0].thumbnails.large.url
+          ? photos[0].thumbnails.large.url
+          : photos[0].url
       )
     : null;
+
+const techniqueRaw = oeuvreFields[F.technique];
 
     const techniqueRaw = oeuvreFields[F.technique];
 
