@@ -274,18 +274,27 @@
   </div>
 
   <script>
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const token = pathParts[pathParts.length - 1] || new URLSearchParams(window.location.search).get('id');
+    // Priorité au query param ?id=, fallback sur le dernier segment du pathname
+    const params = new URLSearchParams(window.location.search);
+    let token = params.get('id');
+
+    if (!token) {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      const last = pathParts[pathParts.length - 1];
+      if (last && last !== 'oeuvre' && last !== 'index.html') {
+        token = last;
+      }
+    }
 
     async function loadOeuvre(t) {
       try {
         const res = await fetch('/api/oeuvre?id=' + encodeURIComponent(t));
-        if (!res.ok) throw new Error();
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const d = await res.json();
         renderCert(d, t);
       } catch(e) {
         document.getElementById('card').innerHTML =
-          '<div class="loading"><p style="color:#993C1D;font-weight:500">Certificat introuvable</p><p style="font-size:13px;color:#5F5E5A;margin-top:6px">Ce certificat n\\'existe pas ou a été révoqué.</p></div>';
+          '<div class="loading"><p style="color:#993C1D;font-weight:500">Certificat introuvable</p><p style="font-size:13px;color:#5F5E5A;margin-top:6px">Ce certificat n\'existe pas ou a été révoqué.</p></div>';
       }
     }
 
@@ -365,7 +374,7 @@
         </div>`;
     }
 
-    if (token && token !== 'oeuvre') {
+    if (token) {
       loadOeuvre(token);
     } else {
       document.getElementById('card').innerHTML =
