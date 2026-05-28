@@ -15,7 +15,6 @@ const F = {
 const A = {
   oeuvre: 'Œuvre'
 };
-};
 
 async function fetchAT(path, apiKey) {
   const res = await fetch('https://api.airtable.com/v0/' + AIRTABLE_BASE + path, {
