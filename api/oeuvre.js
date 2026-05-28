@@ -112,15 +112,9 @@ module.exports = async function handler(req, res) {
     const photos = oeuvreFields[F.photo];
 
     const photoUrl =
-      Array.isArray(photos) && photos.length > 0
-        ? (
-            photos[0].thumbnails &&
-            photos[0].thumbnails.large &&
-            photos[0].thumbnails.large.url
-              ? photos[0].thumbnails.large.url
-              : photos[0].url
-          )
-        : null;
+  Array.isArray(photos) && photos.length > 0
+    ? photos[0].url
+    : null;
 
     const techniqueRaw = oeuvreFields[F.technique];
 
