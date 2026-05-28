@@ -1,6 +1,6 @@
 const AIRTABLE_BASE = 'appZQ3yquS8uPXZy6';
 const OEUVRES_TABLE = 'tblwzvPNp07L2pu4Y';
-const ACHATS_TABLE  = 'tbln43SRK0PdGH9Gi';
+const ACHATS_TABLE = 'tbln43SRK0PdGH9Gi';
 
 const F = {
   oeuvre: 'Œuvre',
@@ -85,21 +85,21 @@ module.exports = async function handler(req, res) {
         return res.status(404).json({ error: 'Certificat introuvable' });
       }
 
-      const oeuvreIds = achat.fields && achat.fields[A.oeuvre];
+      const oeuvreIds = achat.fields[A.oeuvre];
 
       if (!Array.isArray(oeuvreIds) || oeuvreIds.length === 0) {
-        return res.status(404).json({ error: 'Aucune œuvre liée à cet achat' });
+        return res.status(404).json({
+          error: 'Aucune œuvre liée à cet achat',
+          champs_disponibles: Object.keys(achat.fields)
+        });
       }
 
       const oeuvreRecord = await fetchAT('/' + OEUVRES_TABLE + '/' + oeuvreIds[0], apiKey);
-      oeuvreFields = oeuvreRecord && oeuvreRecord.fields ? oeuvreRecord.fields : null;
+      oeuvreFields = oeuvreRecord.fields;
 
     } else if (id.startsWith('rec')) {
       const oeuvreRecord = await fetchAT('/' + OEUVRES_TABLE + '/' + id, apiKey);
-
-      if (oeuvreRecord && oeuvreRecord.fields) {
-        oeuvreFields = oeuvreRecord.fields;
-      }
+      oeuvreFields = oeuvreRecord.fields;
 
     } else {
       return res.status(400).json({ error: 'Format invalide' });
@@ -109,9 +109,20 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'Œuvre introuvable' });
     }
 
-const photos
-const photoUrl
-const techniqueRaw
+    const photos = oeuvreFields[F.photo];
+
+    const photoUrl =
+      Array.isArray(photos) && photos.length > 0
+        ? (
+            photos[0].thumbnails &&
+            photos[0].thumbnails.large &&
+            photos[0].thumbnails.large.url
+              ? photos[0].thumbnails.large.url
+              : photos[0].url
+          )
+        : null;
+
+    const techniqueRaw = oeuvreFields[F.technique];
 
     const technique =
       typeof techniqueRaw === 'object' && techniqueRaw !== null
