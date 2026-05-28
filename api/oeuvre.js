@@ -3,13 +3,13 @@ const OEUVRES_TABLE = 'tblwzvPNp07L2pu4Y';
 const ACHATS_TABLE  = 'tbln43SRK0PdGH9Gi';
 
 const F = {
-  oeuvre:     'fldEB4ApP5ajbkg4L',
-  artiste:    'fldHhZUoLG8Ht5fkZ',
-  photo:      'fldmZixVmqpdLfbym',
-  dimensions: 'fldZQrcXm9Ds4b36U',
-  technique:  'fldKbkhGxJ975ZA88',
-  annee:      'fldAdpAj4vf6K785v',
-  notes:      'fldnwiBffTWnBKDoo'
+  oeuvre: 'Œuvre',
+  artiste: 'Artiste',
+  photo: 'Photo',
+  dimensions: 'Dimensions (cm)',
+  technique: 'Technique',
+  annee: "Année de l'œuvre",
+  notes: 'Notes'
 };
 
 const A = {
