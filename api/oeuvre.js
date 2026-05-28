@@ -13,7 +13,8 @@ const F = {
 };
 
 const A = {
-  oeuvre: 'fldwBtMqArBGXfpZw'
+  oeuvre: 'Œuvre'
+};
 };
 
 async function fetchAT(path, apiKey) {
