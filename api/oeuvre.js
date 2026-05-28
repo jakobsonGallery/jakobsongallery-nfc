@@ -109,24 +109,9 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'Œuvre introuvable' });
     }
 
-    const photos = oeuvreFields[F.photo];
-
-const photos = oeuvreFields[F.photo];
-
-const photoUrl =
-  Array.isArray(photos) && photos.length > 0
-    ? (
-        photos[0].thumbnails &&
-        photos[0].thumbnails.large &&
-        photos[0].thumbnails.large.url
-          ? photos[0].thumbnails.large.url
-          : photos[0].url
-      )
-    : null;
-
-const techniqueRaw = oeuvreFields[F.technique];
-
-    const techniqueRaw = oeuvreFields[F.technique];
+const photos
+const photoUrl
+const techniqueRaw
 
     const technique =
       typeof techniqueRaw === 'object' && techniqueRaw !== null
