@@ -13,7 +13,8 @@ const F = {
 };
 
 const A = {
-  oeuvre: 'Œuvre'
+  oeuvre: 'Œuvre',
+  proprietaire: 'Client'
 };
 
 async function fetchAT(path, apiKey) {
@@ -76,12 +77,19 @@ module.exports = async function handler(req, res) {
 
   try {
     let oeuvreFields = null;
+    let proprietaire = '';
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
 
       if (!achat) {
         return res.status(404).json({ error: 'Certificat introuvable' });
+      }
+
+      proprietaire = achat.fields[A.proprietaire] || '';
+
+      if (Array.isArray(proprietaire)) {
+        proprietaire = proprietaire.join(', ');
       }
 
       const oeuvreIds = achat.fields[A.oeuvre];
@@ -112,13 +120,7 @@ module.exports = async function handler(req, res) {
 
     const photoUrl =
       Array.isArray(photos) && photos.length > 0
-        ? (
-            photos[0].thumbnails &&
-            photos[0].thumbnails.large &&
-            photos[0].thumbnails.large.url
-              ? photos[0].thumbnails.large.url
-              : photos[0].url
-          )
+        ? photos[0].url
         : null;
 
     const techniqueRaw = oeuvreFields[F.technique];
@@ -135,7 +137,8 @@ module.exports = async function handler(req, res) {
       dimensions: oeuvreFields[F.dimensions] || '',
       annee: oeuvreFields[F.annee] || '',
       notes: oeuvreFields[F.notes] || '',
-      photo_url: photoUrl
+      photo_url: photoUrl,
+      proprietaire: proprietaire
     });
 
   } catch (err) {
