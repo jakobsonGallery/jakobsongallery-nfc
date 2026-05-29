@@ -89,6 +89,7 @@ let dateAchat = '';
       }
 
       proprietaire = achat.fields[A.proprietaire] || '';
+      dateAchat = achat.fields[A.dateAchat] || '';
 
       if (Array.isArray(proprietaire)) {
         proprietaire = proprietaire.join(', ');
