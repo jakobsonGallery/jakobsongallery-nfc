@@ -91,8 +91,17 @@ let dateAchat = '';
       proprietaire = achat.fields[A.proprietaire] || '';
       dateAchat = achat.fields[A.dateAchat] || '';
 
-      if (Array.isArray(proprietaire)) {
-        proprietaire = proprietaire.join(', ');
+   proprietaire = achat.fields[A.proprietaire] || '';
+
+if (Array.isArray(proprietaire)) {
+  proprietaire = proprietaire.join(', ');
+}
+
+const dateComplete = achat.fields[A.dateAchat] || '';
+
+dateAchat = dateComplete
+  ? new Date(dateComplete).getFullYear().toString()
+  : '';
       }
 
       const oeuvreIds = achat.fields[A.oeuvre];
