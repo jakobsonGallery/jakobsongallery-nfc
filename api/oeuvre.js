@@ -1,60 +1,69 @@
+// Fonction serverless (type Vercel : /api/oeuvre.js)
+// Renvoie les infos d'une oeuvre à partir d'un token NFC (JAK-...) ou d'un id rec...
+
 const AIRTABLE_BASE = 'appZQ3yquS8uPXZy6';
 const OEUVRES_TABLE = 'tblwzvPNp07L2pu4Y';
-const ACHATS_TABLE = 'tbln43SRK0PdGH9Gi';
+const ACHATS_TABLE  = 'tbln43SRK0PdGH9Gi';
 
+// Noms des champs, tels qu'affichés dans Airtable.
+// La lecture est rendue insensible au type d'apostrophe et à la casse (voir helper "champ"),
+// donc une apostrophe droite ou courbe ne casse plus rien.
 const F = {
   oeuvre: 'Œuvre',
   artiste: 'Artiste',
   photo: 'Photo',
   dimensions: 'Dimensions (cm)',
   technique: 'Technique',
-  annee: "Année de l'œuvre",
-  notes: 'Notes'
+  annee: "Année de l'œuvre",   // champ confirmé dans la table OEUVRES (texte)
+  notes: 'Notes',
 };
 
 const A = {
   oeuvre: 'Œuvre',
-  proprietaire: 'Client'
+  proprietaire: 'Nom du Client',                       // lookup -> nom lisible du client
+  proprietaireLien: 'Client',                          // secours : lien (renvoie un id "rec...")
+  afficherProprietaire: 'Afficher propriétaire publiquement', // case à cocher de consentement
 };
+
+// --- Lecture robuste d'un champ -------------------------------------------------
+// Trouve la bonne clé même si l'apostrophe ou la casse diffèrent légèrement.
+function champ(fields, nomCible) {
+  const norm = (s) =>
+    String(s).normalize('NFC').replace(/['‘’`]/g, "'").trim().toLowerCase();
+  const cible = norm(nomCible);
+  const cle = Object.keys(fields).find((k) => norm(k) === cible);
+  return cle !== undefined ? fields[cle] : undefined;
+}
+
+// Convertit n'importe quelle valeur Airtable (chaîne, nombre, tableau, objet) en texte propre.
+function texte(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) return v.join(', ');
+  if (typeof v === 'object') return v.name || '';
+  return String(v);
+}
 
 async function fetchAT(path, apiKey) {
   const res = await fetch('https://api.airtable.com/v0/' + AIRTABLE_BASE + path, {
-    headers: {
-      Authorization: 'Bearer ' + apiKey
-    }
+    headers: { Authorization: 'Bearer ' + apiKey },
   });
-
   if (!res.ok) {
     const text = await res.text();
     throw new Error('Airtable error ' + res.status + ': ' + text);
   }
-
   return res.json();
 }
 
 async function findAchatByToken(token, apiKey) {
   const formula = encodeURIComponent('{TOKEN_NFC}="' + token + '"');
-
-  const res = await fetch(
-    'https://api.airtable.com/v0/' +
-      AIRTABLE_BASE +
-      '/' +
-      ACHATS_TABLE +
-      '?filterByFormula=' +
-      formula +
-      '&maxRecords=1',
-    {
-      headers: {
-        Authorization: 'Bearer ' + apiKey
-      }
-    }
-  );
-
+  const url =
+    'https://api.airtable.com/v0/' + AIRTABLE_BASE + '/' + ACHATS_TABLE +
+    '?filterByFormula=' + formula + '&maxRecords=1';
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + apiKey } });
   if (!res.ok) {
     const text = await res.text();
     throw new Error('Airtable search error ' + res.status + ': ' + text);
   }
-
   const data = await res.json();
   return data.records && data.records[0] ? data.records[0] : null;
 }
@@ -64,13 +73,11 @@ module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
 
   const id = req.query.id;
-
   if (!id) {
     return res.status(400).json({ error: 'Token manquant' });
   }
 
   const apiKey = process.env.AIRTABLE_API_KEY;
-
   if (!apiKey) {
     return res.status(500).json({ error: 'Clé API manquante' });
   }
@@ -81,33 +88,32 @@ module.exports = async function handler(req, res) {
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
-
       if (!achat) {
         return res.status(404).json({ error: 'Certificat introuvable' });
       }
 
-      proprietaire = achat.fields[A.proprietaire] || '';
-
-      if (Array.isArray(proprietaire)) {
-        proprietaire = proprietaire.join(', ');
+      // Le nom du propriétaire n'est exposé publiquement que si la case
+      // "Afficher propriétaire publiquement" est cochée (accord du client).
+      const consentement = champ(achat.fields, A.afficherProprietaire) === true;
+      if (consentement) {
+        proprietaire =
+          texte(champ(achat.fields, A.proprietaire)) ||
+          texte(champ(achat.fields, A.proprietaireLien));
       }
 
-      const oeuvreIds = achat.fields[A.oeuvre];
-
+      const oeuvreIds = champ(achat.fields, A.oeuvre);
       if (!Array.isArray(oeuvreIds) || oeuvreIds.length === 0) {
         return res.status(404).json({
           error: 'Aucune œuvre liée à cet achat',
-          champs_disponibles: Object.keys(achat.fields)
+          champs_disponibles: Object.keys(achat.fields),
         });
       }
 
       const oeuvreRecord = await fetchAT('/' + OEUVRES_TABLE + '/' + oeuvreIds[0], apiKey);
       oeuvreFields = oeuvreRecord.fields;
-
     } else if (id.startsWith('rec')) {
       const oeuvreRecord = await fetchAT('/' + OEUVRES_TABLE + '/' + id, apiKey);
       oeuvreFields = oeuvreRecord.fields;
-
     } else {
       return res.status(400).json({ error: 'Format invalide' });
     }
@@ -116,35 +122,21 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'Œuvre introuvable' });
     }
 
-    const photos = oeuvreFields[F.photo];
-
+    const photos = champ(oeuvreFields, F.photo);
     const photoUrl =
-      Array.isArray(photos) && photos.length > 0
-        ? photos[0].url
-        : null;
-
-    const techniqueRaw = oeuvreFields[F.technique];
-
-    const technique =
-      typeof techniqueRaw === 'object' && techniqueRaw !== null
-        ? techniqueRaw.name || ''
-        : techniqueRaw || '';
+      Array.isArray(photos) && photos.length > 0 ? photos[0].url : null;
 
     return res.status(200).json({
-      oeuvre: oeuvreFields[F.oeuvre] || '',
-      artiste: oeuvreFields[F.artiste] || '',
-      technique: technique,
-      dimensions: oeuvreFields[F.dimensions] || '',
-      annee: oeuvreFields[F.annee] || '',
-      notes: oeuvreFields[F.notes] || '',
+      oeuvre: texte(champ(oeuvreFields, F.oeuvre)),
+      artiste: texte(champ(oeuvreFields, F.artiste)),
+      technique: texte(champ(oeuvreFields, F.technique)),
+      dimensions: texte(champ(oeuvreFields, F.dimensions)),
+      annee: texte(champ(oeuvreFields, F.annee)),
+      notes: texte(champ(oeuvreFields, F.notes)),
       photo_url: photoUrl,
-      proprietaire: proprietaire
+      proprietaire: proprietaire,
     });
-
   } catch (err) {
-    return res.status(500).json({
-      error: 'Erreur serveur',
-      detail: err.message
-    });
+    return res.status(500).json({ error: 'Erreur serveur', detail: err.message });
   }
 };
