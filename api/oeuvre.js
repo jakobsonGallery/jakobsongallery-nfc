@@ -14,7 +14,7 @@ const F = {
 
 const A = {
   oeuvre: 'Œuvre',
-  proprietaire: 'Client'
+  proprietaire: 'Nom du client'
 };
 
 async function fetchAT(path, apiKey) {
