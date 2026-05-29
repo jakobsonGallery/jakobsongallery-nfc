@@ -77,9 +77,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    let oeuvreFields = null;
-let proprietaire = '';
-let dateAchat = '';
+   const A = {
+  oeuvre: 'Œuvre',
+  proprietaire: 'Nom du client',
+  dateAchat: 'Date d’achat'
+};
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
@@ -138,7 +140,7 @@ let dateAchat = '';
       artiste: oeuvreFields[F.artiste] || '',
       technique: technique,
       dimensions: oeuvreFields[F.dimensions] || '',
-      annee: oeuvreFields[F.annee] || '',
+     annee: dateAchat || '',
       notes: oeuvreFields[F.notes] || '',
       photo_url: photoUrl,
       proprietaire: proprietaire
