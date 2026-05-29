@@ -15,7 +15,7 @@ const F = {
 const A = {
   oeuvre: 'Œuvre',
   proprietaire: 'Nom du client',
-  dateAchat: "Date d'achat"
+ dateAchat: 'Date d’achat'
 };
 
 async function fetchAT(path, apiKey) {
@@ -77,10 +77,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-   const A = {
-  oeuvre: 'Œuvre',
-  proprietaire: 'Nom du client',
-  dateAchat: 'Date d’achat'
+let oeuvreFields = null;
+let proprietaire = '';
+const dateComplete = achat.fields[A.dateAchat] || '';
+dateAchat = dateComplete
+  ? new Date(dateComplete).getFullYear().toString()
+  : '';
 };
 
     if (id.startsWith('JAK-')) {
