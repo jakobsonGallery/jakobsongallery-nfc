@@ -15,7 +15,7 @@ const F = {
 const A = {
   oeuvre: 'Œuvre',
   proprietaire: 'Nom du client',
-dateAchat: 'Date d’achat'
+  dateAchat: 'Date d’achat'
 };
 
 async function fetchAT(path, apiKey) {
@@ -77,9 +77,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-let oeuvreFields = null;
-let proprietaire = '';
-let dateAchat = '';
+    let oeuvreFields = null;
+    let proprietaire = '';
+    let dateAchat = '';
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
@@ -89,20 +89,16 @@ let dateAchat = '';
       }
 
       proprietaire = achat.fields[A.proprietaire] || '';
-      dateAchat = achat.fields[A.dateAchat] || '';
 
-   proprietaire = achat.fields[A.proprietaire] || '';
-
-if (Array.isArray(proprietaire)) {
-  proprietaire = proprietaire.join(', ');
-}
-
-const dateComplete = achat.fields[A.dateAchat] || '';
-
-dateAchat = dateComplete
-  ? new Date(dateComplete).getFullYear().toString()
-  : '';
+      if (Array.isArray(proprietaire)) {
+        proprietaire = proprietaire.join(', ');
       }
+
+      const dateComplete = achat.fields[A.dateAchat] || '';
+
+      dateAchat = dateComplete
+        ? new Date(dateComplete).getFullYear().toString()
+        : '';
 
       const oeuvreIds = achat.fields[A.oeuvre];
 
@@ -147,7 +143,7 @@ dateAchat = dateComplete
       artiste: oeuvreFields[F.artiste] || '',
       technique: technique,
       dimensions: oeuvreFields[F.dimensions] || '',
-     annee: dateAchat || '',
+      annee: dateAchat || '',
       notes: oeuvreFields[F.notes] || '',
       photo_url: photoUrl,
       proprietaire: proprietaire
