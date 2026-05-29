@@ -79,11 +79,7 @@ module.exports = async function handler(req, res) {
   try {
 let oeuvreFields = null;
 let proprietaire = '';
-const dateComplete = achat.fields[A.dateAchat] || '';
-dateAchat = dateComplete
-  ? new Date(dateComplete).getFullYear().toString()
-  : '';
-};
+let dateAchat = '';
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
