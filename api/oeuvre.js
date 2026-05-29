@@ -78,7 +78,8 @@ module.exports = async function handler(req, res) {
 
   try {
     let oeuvreFields = null;
-    let proprietaire = '';
+let proprietaire = '';
+let dateAchat = '';
 
     if (id.startsWith('JAK-')) {
       const achat = await findAchatByToken(id, apiKey);
